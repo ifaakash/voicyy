@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DevOps Dictaphone</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
+        #output { width: 100%; height: 300px; background: #222; color: #fff; border: 1px solid #444; padding: 10px; font-size: 16px; margin-top: 20px; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #444; color: #fff; border: none; }
+        button.recording { background: #d00; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <h1>> DEVOPS_DICTAPHONE_v1</h1>
+    <p>Status: <span id="status">Idle</span></p>
+    <button id="toggle">START LISTENING (Mic)</button>
+    <textarea id="output" placeholder="Transcript will appear here..."></textarea>
+    <button onclick="copyText()">COPY TO CLIPBOARD</button>
+
+    <script>
+        // Check for browser support
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Web Speech API not supported. Use Chrome.");
+        }
+
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = true; // KEEPS LISTENING even if you pause
+        recognition.interimResults = true; // Shows text as you speak
+
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+        const toggleBtn = document.getElementById('toggle');
+        let isRecording = false;
+
+        recognition.onstart = () => {
+            isRecording = true;
+            status.innerText = "LISTENING...";
+            toggleBtn.innerText = "STOP LISTENING";
+            toggleBtn.classList.add("recording");
+        };
+
+        recognition.onend = () => {
+            if (isRecording) recognition.start(); // Auto-restart if it drops
+        };
+
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    let text = event.results[i][0].transcript;
+                    // --- THE DEVOPS PARSER ---
+                    // Fix common speech-to-text errors for DevOps jargon
+                    text = text.replace(/cube cuddle/gi, "kubectl");
+                    text = text.replace(/pseudo/gi, "sudo");
+                    text = text.replace(/engine x/gi, "nginx");
+                    text = text.replace(/doctor/gi, "docker");
+                    // -------------------------
+                    output.value += text + " ";
+                }
+            }
+        };
+
+        toggleBtn.onclick = () => {
+            if (isRecording) {
+                isRecording = false;
+                recognition.stop(); // Actually stop
+                recognition.onend = null; // Prevent auto-restart
+                status.innerText = "Idle";
+                toggleBtn.innerText = "START LISTENING";
+                toggleBtn.classList.remove("recording");
+            } else {
+                recognition.start();
+            }
+        };
+
+        function copyText() {
+            output.select();
+            document.execCommand('copy');
+            alert("Copied! Now paste into Gemini.");
+        }
+    </script>
+</body>
+</html>
